@@ -169,16 +169,29 @@ def end():
     pwm.setAllPulse(700)
 
 if __name__ == '__main__':
-    ini()
+    # ini()
 
-    # 创建一个线程用于控制输入
-    input_thread_obj = threading.Thread(target=input_thread)
-    input_thread_obj.start()
+    # # 创建一个线程用于控制输入
+    # input_thread_obj = threading.Thread(target=input_thread)
+    # task_thread = threading.Thread(target=work)
+    # input_thread_obj.start()
 
-    task_thread = threading.Thread(target=work)
-    task_thread.start()
+    # task_thread.start()
 
-    input_thread_obj.join()
-    task_thread.join()
+    # input_thread_obj.join()
+    # task_thread.join()
 
-    end()
+    # end()
+  pwm = PCA9685(0x40, debug=True)
+  pwm.setPWMFreq(50)
+  while True:
+   # setServoPulse(2,2500)
+    for i in range(500,2500,10):  
+      pwm.setServoPulse(0,i)   
+      pwm.setServoPulse(1,i)   
+      time.sleep(0.02)     
+
+    for i in range(2500,500,-10):
+      pwm.setServoPulse(0,i) 
+      pwm.setServoPulse(1,i)   
+      time.sleep(0.02)
