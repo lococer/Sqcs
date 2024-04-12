@@ -105,8 +105,7 @@ class PCA9685:
 		pulse = pulse*4096/20000
 		self.setAllPWM(0, pulse)
 
-pwm = PCA9685(0x40, debug=False)
-pwm.setPWMFreq(50)
+
 
 def get_char():
     fd = sys.stdin.fileno()
@@ -123,12 +122,14 @@ channel = 3
 pulse = 0
 channelPulse = [0,0,0,0]
 
-def work():
+
+
+def work(pwm):
 	global stopped, channelPulse
 
 	while stopped:
 		for i, v in enumerate(channelPulse):
-			v = int(v * 0.01 * 851 + 724)
+			v = int(v * 0.01 * 851 + 1215)
 			pwm.setServoPulse(i, v)
 
 def input_thread():
@@ -160,38 +161,50 @@ def input_thread():
 		except:
 			pass
 
-def ini():
+def ini(pwm):
     # 初始状态
     pwm.setAllPulse(700)
 
-def end():
+def end(pwm):
     # 结束状态
     pwm.setAllPulse(700)
 
 if __name__ == '__main__':
-    # ini()
-
+	pwm = PCA9685(0x40, debug=False)
+	pwm.setPWMFreq(50)
+	# ini(pwm)
+	# print("start")
     # # 创建一个线程用于控制输入
-    # input_thread_obj = threading.Thread(target=input_thread)
-    # task_thread = threading.Thread(target=work)
-    # input_thread_obj.start()
+	# input_thread_obj = threading.Thread(target=input_thread)
+	# task_thread = threading.Thread(target=work, args=(pwm,))
+	# input_thread_obj.start()
 
-    # task_thread.start()
+	# task_thread.start()
 
-    # input_thread_obj.join()
-    # task_thread.join()
+	# input_thread_obj.join()
+	# task_thread.join()
 
-    # end()
-  pwm = PCA9685(0x40, debug=True)
-  pwm.setPWMFreq(50)
-  while True:
-   # setServoPulse(2,2500)
-    for i in range(500,2500,10):  
-      pwm.setServoPulse(0,i)   
-      pwm.setServoPulse(1,i)   
-      time.sleep(0.02)     
+	# end(pwm)
+	pwm = PCA9685(0x40, debug=True)
+	pwm.setPWMFreq(50)
+	pwm.setAllPulse(700)
+	pwm.setAllPulse(1225)
+	# pwm.setServoPulse(2, 1025)
+	# pwm.setServoPulse(2, 1225)
+	time.sleep(1)
 
-    for i in range(2500,500,-10):
-      pwm.setServoPulse(0,i) 
-      pwm.setServoPulse(1,i)   
-      time.sleep(0.02)
+
+
+	pwm.setAllPulse(700)
+
+#   while True:
+#    # setServoPulse(2,2500)
+#     for i in range(500,2500,10):  
+#       pwm.setServoPulse(0,i)   
+#       pwm.setServoPulse(1,i)   
+#       time.sleep(0.02)     
+
+#     for i in range(2500,500,-10):
+#       pwm.setServoPulse(0,i) 
+#       pwm.setServoPulse(1,i)   
+#       time.sleep(0.02)

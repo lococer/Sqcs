@@ -31,11 +31,12 @@ class ctl_kbd:
     def work_thread(self):
         while self.stopped:
             for i, v in enumerate(self.channelPulse):
-                delt = 0
-                if( i == 0 ): v = (int)(0.02 * (2250 - 1225) * v + 1225 + delt )
-                if( i == 1 ): v = (int)(0.02 * (2250 - 1225) * (v+1) + 1225 + delt )
-                if( i == 2 ): v = (int)(0.02 * (2250 - 1000) * v + 1015 + delt )
-                if( i == 3 ): v = (int)(0.02 * (2250 - 1000) * (v+1) + 1015 + delt )
+                # delt = 0
+                # if( i == 0 ): v = (int)(0.02 * (2250 - 1225) * v + 1225 + delt )
+                # if( i == 1 ): v = (int)(0.02 * (2250 - 1225) * (v+1) + 1225 + delt )
+                # if( i == 2 ): v = (int)(0.02 * (2250 - 1000) * v + 1015 + delt )
+                # if( i == 3 ): v = (int)(0.02 * (2250 - 1000) * (v+1) + 1015 + delt )
+                v = (int)(0.01 * (2000 - 1000) * v + 1000 )
                 self.pwm.setServoPulse(i, v)
 
     def input_thread(self):
@@ -49,7 +50,7 @@ class ctl_kbd:
                     self.stopped = False
                 if ch == 'w' :
                     self.channelPulse[channel] += 1
-                    self.channelPulse[channel] = min(self.channelPulse[channel], 50)
+                    self.channelPulse[channel] = min(self.channelPulse[channel], 100)
                 if ch == 's' :
                     self.channelPulse[channel] -= 1
                     self.channelPulse[channel] = max(self.channelPulse[channel], 0)
@@ -62,7 +63,7 @@ class ctl_kbd:
                 if ch == 'W':
                     for i in range(4):
                         self.channelPulse[i] += 1
-                        self.channelPulse[i] = min(self.channelPulse[i], 50)
+                        self.channelPulse[i] = min(self.channelPulse[i], 100)
                 if ch == 'S':
                     for i in range(4):
                         self.channelPulse[i] -= 1
