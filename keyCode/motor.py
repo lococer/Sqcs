@@ -6,6 +6,7 @@ import pca9685
 import threading
 
 class motor:
+    lock = threading.Lock()
     def __init__(self, debug=True):
         # special initialization for PCA9685 module
         pwm = pca9685.PCA9685(0x40, debug=True)
@@ -30,15 +31,19 @@ class motor:
         print("Cleaning up")
 
     def update(self, channel, pulse):
-        channel = self.channelmap[channel]
-        self.channelPulse[channel] = (pulse)
-        # self.channelPulse[channel] = (int)(pulse)
+        with self.lock:
+            channel = self.channelmap[channel]
+            self.channelPulse[channel] = (pulse)
 
     def work_thread(self):
         while self.stopped:
             for i, v in enumerate(self.channelPulse):
                 v = (int)(0.01 * (2000 - 1000) * v + 1000 )
                 self.pwm.setServoPulse(i, v)
+        for i in range(5):
+            self.pwm.setServoPulse(i, 1000)
+        return
+
 
     def run(self):
         work_thread_obj = threading.Thread(target=self.work_thread)

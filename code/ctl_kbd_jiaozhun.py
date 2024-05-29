@@ -45,10 +45,10 @@ class ctl_kbd:
                 if ch == 'q' :
                     self.stopped = False
                 if ch == 'w' :
-                    self.channelPulse[channel] += 1
+                    self.channelPulse[channel] += 10
                     self.channelPulse[channel] = min(self.channelPulse[channel], 100)
                 if ch == 's' :
-                    self.channelPulse[channel] -= 1
+                    self.channelPulse[channel] -= 10
                     self.channelPulse[channel] = max(self.channelPulse[channel], 0)
                 if ch == 'd' :
                     self.channelPulse[channel] = 0
@@ -58,11 +58,11 @@ class ctl_kbd:
                         self.channelPulse[i] = 0
                 if ch == 'W':
                     for i in range(4):
-                        self.channelPulse[i] += 1
+                        self.channelPulse[i] += 10
                         self.channelPulse[i] = min(self.channelPulse[i], 100)
                 if ch == 'S':
                     for i in range(4):
-                        self.channelPulse[i] -= 1
+                        self.channelPulse[i] -= 10
                         self.channelPulse[i] = max(self.channelPulse[i], 0)
 
                 if ch == '0' :

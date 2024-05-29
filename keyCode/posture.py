@@ -20,25 +20,37 @@ class posture:
         def update(self, new_value):
             if self.filtered_value is None:
                 self.filtered_value = new_value
-            self.filtered_value = self.alpha * new_value + (1 - self.alpha) * self.filtered_value
+            else:
+                if self.sepcial:
+                    error = new_value - self.filtered_value
+                    if abs(error) < 10:
+                        self.filtered_value = self.filtered_value * 0.01
+                    else:
+                        self.filtered_value = self.alpha * new_value + (1 - self.alpha) * self.filtered_value
+                else:
+                    error = new_value - self.filtered_value
+                    if abs(error) < 10:
+                        self.filtered_value = self.filtered_value * 0.01
+                    else:
+                        self.filtered_value = self.alpha * new_value + (1 - self.alpha) * self.filtered_value
             return self.filtered_value
         
     def __init__(self, dt):
         # self.sensor = mpu6050(0x68)
         self.sensor = GyroKalmanFilter(0x68)
         self.dt = dt  # 采样时间间隔（秒）
-        self.alpha = 0.935  # 陀螺仪权重，加速度计权重为 1 - alpha
+        self.alpha = 0.98  # 陀螺仪权重，加速度计权重为 1 - alpha
         self.roll = 0
         self.pitch = 0
         self.yaw = 0
-        lowpassalpha = 0.25  # 低通滤波器参数
-        self.gyro_x_filter = self.LowPassFilter(lowpassalpha)
+        lowpassalpha = 0.3  # 低通滤波器参数
+        self.gyro_x_filter = self.LowPassFilter(lowpassalpha, True)
         self.gyro_y_filter = self.LowPassFilter(lowpassalpha)
         self.gyro_z_filter = self.LowPassFilter(lowpassalpha)
 
         self.accel_x_filter = self.LowPassFilter(lowpassalpha)
         self.accel_y_filter = self.LowPassFilter(lowpassalpha)
-        self.accel_z_filter = self.LowPassFilter(lowpassalpha)
+        self.accel_z_filter = self.LowPassFilter(lowpassalpha, True)
 
     def filter_accel(self, gyro_x, gyro_y, gyro_z):
         gyro_x = self.gyro_x_filter.update(gyro_x)
@@ -143,28 +155,34 @@ class posture:
 if __name__ == '__main__':
     import time
 
-
     # 记录第一次接收到数据的时间
     start_time = time.time()
+
+
 
     Posture = posture(0.01)
     Posture.run()
     import time
+    import socket
+    # 设置Socket连接
+    HOST = '192.168.31.102'  # 主机IP地址
+    PORT = 12345  # 端口号
+    # 创建Socket对象
+    s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     try:
-        # s.bind((HOST, PORT))
-        # s.listen(1)
+        s.bind((HOST, PORT))
+        s.listen(1)
         # 等待客户端连接
-        # print("Waiting for connection...")
-        # conn, addr = s.accept()
-        # print('Connected by', addr)
+        print("Waiting for connection...")
+        conn, addr = s.accept()
+        print('Connected by', addr)
         while True:
             current_posture = Posture.getdata()
-            print(current_posture)
-            # data = f"{current_posture[0]},{current_posture[1]},{Posture.read_gyro(0)[0]},{Posture.read_gyro(0)[1]},{Posture.read_gyro(0)[2]},0, "
+            data = f"{current_posture[0]},{current_posture[1]},{Posture.read_gyro(0)[0]},{Posture.read_gyro(0)[1]},{Posture.read_gyro(0)[2]},0, "
             # request = conn.recv(1024).decode('utf-8')
             # if request:
                 # conn.sendall(data.encode('utf-8'))
-            # conn.sendall(data.encode('utf-8'))
+            conn.sendall(data.encode('utf-8'))
             # data.clear()
             # time.sleep(0.01)
                 # 计算时间间隔并打印
@@ -176,7 +194,7 @@ if __name__ == '__main__':
             start_time = end_time
 
     except  KeyboardInterrupt:
-        # s.close()
+        s.close()
         print("Socket closed")
         sys.exit()
 

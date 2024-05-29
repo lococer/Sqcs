@@ -1,3 +1,6 @@
+import socket
+from mpu6050_kalman import GyroKalmanFilter
+
 # This code is used to estimate the posture of the robot using the MPU6050 sensor.
 # using complementary filter to combine the information from the gyroscope and accelerometer.
 # using getdata() function to get the current posture of the robot.
@@ -6,10 +9,9 @@ import time
 import sys
 sys.path.append("/home/orangepi/.local/lib/python3.10/site-packages")
 # from mpu6050 import mpu6050
-from mpu6050_kalman import GyroKalmanFilter
 import math
 import threading
-
+import struct
 class posture:
     class LowPassFilter: #low pass filter
         def __init__(self, alpha, special=False):
@@ -20,25 +22,37 @@ class posture:
         def update(self, new_value):
             if self.filtered_value is None:
                 self.filtered_value = new_value
-            self.filtered_value = self.alpha * new_value + (1 - self.alpha) * self.filtered_value
+            else:
+                if self.sepcial:
+                    error = new_value - self.filtered_value
+                    if abs(error) < 10:
+                        self.filtered_value = self.filtered_value * 0.01
+                    else:
+                        self.filtered_value = self.alpha * new_value + (1 - self.alpha) * self.filtered_value
+                else:
+                    error = new_value - self.filtered_value
+                    if abs(error) < 10:
+                        self.filtered_value = self.filtered_value * 0.01
+                    else:
+                        self.filtered_value = self.alpha * new_value + (1 - self.alpha) * self.filtered_value
             return self.filtered_value
         
     def __init__(self, dt):
         # self.sensor = mpu6050(0x68)
         self.sensor = GyroKalmanFilter(0x68)
         self.dt = dt  # 采样时间间隔（秒）
-        self.alpha = 0.935  # 陀螺仪权重，加速度计权重为 1 - alpha
+        self.alpha = 0.98  # 陀螺仪权重，加速度计权重为 1 - alpha
         self.roll = 0
         self.pitch = 0
         self.yaw = 0
-        lowpassalpha = 0.25  # 低通滤波器参数
-        self.gyro_x_filter = self.LowPassFilter(lowpassalpha)
+        lowpassalpha = 0.3  # 低通滤波器参数
+        self.gyro_x_filter = self.LowPassFilter(lowpassalpha, True)
         self.gyro_y_filter = self.LowPassFilter(lowpassalpha)
         self.gyro_z_filter = self.LowPassFilter(lowpassalpha)
 
         self.accel_x_filter = self.LowPassFilter(lowpassalpha)
         self.accel_y_filter = self.LowPassFilter(lowpassalpha)
-        self.accel_z_filter = self.LowPassFilter(lowpassalpha)
+        self.accel_z_filter = self.LowPassFilter(lowpassalpha, True)
 
     def filter_accel(self, gyro_x, gyro_y, gyro_z):
         gyro_x = self.gyro_x_filter.update(gyro_x)
@@ -56,7 +70,7 @@ class posture:
         while True:
             try:
                 # accel_data = self.sensor.get_accel_data()
-                # accel_x = accel_data['x']
+                # Aaccel_x = accel_data['x']
                 # accel_y = accel_data['y']
                 # accel_z = accel_data['z']
                 # # accel_x, accel_y, accel_z = self.filter_accel(accel_x, accel_y, accel_z)
@@ -139,44 +153,83 @@ class posture:
         t = threading.Thread(target=self.working_thread)
         t.start()
 
+Posture = posture(0.01)
+Posture.run()
 
-if __name__ == '__main__':
-    import time
+# 函数用于获取数据
+def getdata():
+    # 获取姿态数据
+    roll, pitch, yaw = Posture.getdata()[:3]
+    # 将姿态数据乘以 100 并转换为整数，确保在 0 到 255 范围内
+    roll_int = int(roll * 100)
+    pitch_int = int(pitch * 100)
+    yaw_int = int(yaw * 100)
+    # 将数据限制在 0 到 255 范围内
+    # roll_int = max(min(roll_int, 255), 0)
+    # pitch_int = max(min(pitch_int, 255), 0)
+    # yaw_int = max(min(yaw_int, 255), 0)
+
+    # print("roll_int:", roll_int, "pitch_int:", pitch_int, "yaw_int:", yaw_int)
+    return roll_int & 0xFFFF, pitch_int & 0xFFFF, yaw_int & 0xFFFF, 1
 
 
-    # 记录第一次接收到数据的时间
-    start_time = time.time()
+# 设置目标地址和端口
+HOST = '192.168.31.68'  # 目标地址
+PORT = 12312  # 目标端口
 
-    Posture = posture(0.01)
-    Posture.run()
-    import time
-    try:
-        # s.bind((HOST, PORT))
-        # s.listen(1)
-        # 等待客户端连接
-        # print("Waiting for connection...")
-        # conn, addr = s.accept()
-        # print('Connected by', addr)
-        while True:
-            current_posture = Posture.getdata()
-            print(current_posture)
-            # data = f"{current_posture[0]},{current_posture[1]},{Posture.read_gyro(0)[0]},{Posture.read_gyro(0)[1]},{Posture.read_gyro(0)[2]},0, "
-            # request = conn.recv(1024).decode('utf-8')
-            # if request:
-                # conn.sendall(data.encode('utf-8'))
-            # conn.sendall(data.encode('utf-8'))
-            # data.clear()
-            # time.sleep(0.01)
-                # 计算时间间隔并打印
-            end_time = time.time()
-            time_interval = end_time - start_time
-            print("Time interval since last 'Received':", time_interval, "seconds")
+# 创建socket对象
+s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 
-            # 更新起始时间
-            start_time = end_time
+#try:
+    # 连接到目标地址和端口
+print("Connecting to server...")
+s.connect((HOST, PORT))
+print("Connected to server!")
 
-    except  KeyboardInterrupt:
-        # s.close()
-        print("Socket closed")
-        sys.exit()
+def calSCAC(data):
+    SC = 0x00
+    AC = 0x00
+    for i in range(len(data)):
+        SC += data[i] & 0xFF
+        AC += SC & 0xFF
+        SC &= 0xFF
+        AC &= 0xFF
+    return SC, AC
 
+while True:
+    # 获取数据 横滚 俯仰 偏航 融合状态
+    ROL, PIT, YAW, FUSION_STA = getdata()
+    YAW = 0
+    print("ROL:", ROL, "PIT:", PIT, "YAW:", YAW, "FUSION_STA:", FUSION_STA)
+    # ROL, PIT, YAW, FUSION_STA = 0, 0, 0, 1
+    # print("ROL:", ROL, "PIT:", PIT, "YAW:", YAW, "FUSION_STA:", FUSION_STA)
+    
+    HEAD = 0xAA
+    D_ADDR = 0xFF
+    ID = 0x03
+    LEN = 7
+    DATA = [ROL & 0xFF, (ROL >> 8 ) & 0xFF, PIT & 0xFF, (PIT >> 8 ) & 0xFF, YAW & 0xFF, (YAW >> 8 ) & 0xFF, FUSION_STA]
+    SC, AC = calSCAC([HEAD, D_ADDR, ID, LEN, DATA[0], DATA[1], DATA[2], DATA[3],DATA[4], DATA[5], DATA[6]])
+
+    SC &= 0xFF
+    AC &= 0xFF
+
+    # 构造帧
+    #frame = bytearray([HEAD >> 8, HEAD & 0xFF, D_ADDR, ID, LEN])
+    # print(DATA[0], DATA[1], DATA[2], DATA[3], SC, AC)
+    frame = bytes([HEAD, D_ADDR, ID, LEN, DATA[0], DATA[1], DATA[2], DATA[3],DATA[4], DATA[5], DATA[6], SC, AC])
+    
+    # print("Frame:", frame)
+    # 发送帧
+    s.sendto(frame, (HOST, PORT))
+    # print("Frame sent:", frame)
+    
+    # print("Frame sent successfully!")
+    time.sleep(0.01)
+s.close()
+
+#except Exception as e:
+    #print("Error:", e)
+#finally:
+    # 关闭socket连接
+    #s.close()
